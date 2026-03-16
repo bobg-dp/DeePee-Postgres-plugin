@@ -1,0 +1,166 @@
+{
+  "name": "postgress-plugin",
+  "displayName": "PostgreSQL Workspace Explorer",
+  "description": "VS Code extension for browsing and editing PostgreSQL data with transaction support.",
+  "version": "0.0.1",
+  "publisher": "local",
+  "engines": {
+    "vscode": "^1.110.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "main": "./dist/extension.js",
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "vscode:prepublish": "npm run compile"
+  },
+  "contributes": {
+    "commands": [
+      {
+        "command": "postgresPlugin.createConnection",
+        "title": "PostgreSQL: Create Connection",
+        "icon": "$(add)"
+      },
+      {
+        "command": "postgresPlugin.editConnection",
+        "title": "PostgreSQL: Edit Connection",
+        "icon": "$(edit)"
+      },
+      {
+        "command": "postgresPlugin.deleteConnection",
+        "title": "PostgreSQL: Delete Connection",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "postgresPlugin.connect",
+        "title": "PostgreSQL: Connect",
+        "icon": "$(plug)"
+      },
+      {
+        "command": "postgresPlugin.connectSaved",
+        "title": "PostgreSQL: Connect Saved Connection",
+        "icon": "$(plug)"
+      },
+      {
+        "command": "postgresPlugin.disconnect",
+        "title": "PostgreSQL: Disconnect",
+        "icon": "$(debug-disconnect)"
+      },
+      {
+        "command": "postgresPlugin.refreshExplorer",
+        "title": "PostgreSQL: Refresh Explorer",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "postgresPlugin.previewTable",
+        "title": "PostgreSQL: Preview Table",
+        "icon": "$(table)"
+      },
+      {
+        "command": "postgresPlugin.executeSql",
+        "title": "PostgreSQL: Execute SQL",
+        "icon": "$(terminal)"
+      },
+      {
+        "command": "postgresPlugin.beginTransaction",
+        "title": "PostgreSQL: Begin Transaction",
+        "icon": "$(play-circle)"
+      },
+      {
+        "command": "postgresPlugin.commitTransaction",
+        "title": "PostgreSQL: Commit Transaction",
+        "icon": "$(check)"
+      },
+      {
+        "command": "postgresPlugin.rollbackTransaction",
+        "title": "PostgreSQL: Rollback Transaction",
+        "icon": "$(discard)"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "postgresPlugin",
+          "title": "PostgreSQL",
+          "icon": "media/postgres.svg"
+        }
+      ]
+    },
+    "views": {
+      "postgresPlugin": [
+        {
+          "id": "postgresPlugin.explorer",
+          "name": "Connections",
+          "icon": "media/postgres.svg"
+        }
+      ]
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "postgresPlugin.createConnection",
+          "when": "view == postgresPlugin.explorer",
+          "group": "navigation@1"
+        },
+        {
+          "command": "postgresPlugin.connect",
+          "when": "view == postgresPlugin.explorer",
+          "group": "navigation@2"
+        },
+        {
+          "command": "postgresPlugin.refreshExplorer",
+          "when": "view == postgresPlugin.explorer",
+          "group": "navigation@3"
+        },
+        {
+          "command": "postgresPlugin.disconnect",
+          "when": "view == postgresPlugin.explorer",
+          "group": "navigation@4"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "postgresPlugin.connectSaved",
+          "when": "view == postgresPlugin.explorer && viewItem == postgresConnection",
+          "group": "inline@1"
+        },
+        {
+          "command": "postgresPlugin.editConnection",
+          "when": "view == postgresPlugin.explorer && viewItem == postgresConnection",
+          "group": "inline@2"
+        },
+        {
+          "command": "postgresPlugin.deleteConnection",
+          "when": "view == postgresPlugin.explorer && viewItem == postgresConnection",
+          "group": "inline@3"
+        },
+        {
+          "command": "postgresPlugin.previewTable",
+          "when": "view == postgresPlugin.explorer && viewItem == postgresTable",
+          "group": "inline@4"
+        }
+      ]
+    }
+  },
+  "keywords": [
+    "postgres",
+    "postgresql",
+    "database",
+    "sql"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "pg": "^8.20.0"
+  },
+  "devDependencies": {
+    "@types/node": "^25.5.0",
+    "@types/pg": "^8.18.0",
+    "@types/vscode": "^1.110.0",
+    "@vscode/vsce": "^3.7.1",
+    "esbuild": "^0.27.4",
+    "typescript": "^5.9.3"
+  }
+}
