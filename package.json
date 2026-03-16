@@ -1,5 +1,5 @@
 {
-  "name": "postgress-plugin",
+  "name": "dee-pee-postgreesql-plugin",
   "displayName": "PostgreSQL Workspace Explorer",
   "description": "VS Code extension for browsing and editing PostgreSQL data with transaction support.",
   "version": "0.0.1",
