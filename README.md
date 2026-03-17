@@ -2,6 +2,12 @@
 
 DeePee is a VS Code extension for working with PostgreSQL using a UI-first workflow.
 
+## Open Source and Support
+
+This extension is free and open source.
+If it helps you and you would like to buy me a coffee, you can do it here:
+https://buycoffee.to/driftingpixel
+
 ## Features
 
 - Dedicated PostgreSQL panel in the Activity Bar
