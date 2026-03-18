@@ -19,6 +19,7 @@ https://buycoffee.to/driftingpixel
 - Schema -> table -> column explorer
 - SQL query panel opened from icon next to connection name
 - SQL autocomplete in query editor (table and column suggestions)
+- Live SQL syntax validation in query editor (status + invalid underline)
 - Query execution with `Proceed` and tabular results below the editor
 - Saved SQL queries per connection in tree (`Saved Queries` folder)
 - Rename/delete saved queries from tree item actions
@@ -55,9 +56,11 @@ https://buycoffee.to/driftingpixel
 3. Use autocomplete while typing.
 4. Suggestions for tables and columns appear while typing.
 5. Press `Ctrl+Space` (or `Cmd+Space`, depending on system shortcut settings) to force suggestions.
-6. Click `Proceed` to execute.
-7. Results are rendered directly under the query panel.
-8. Click `Save` to store or update a query for the current connection.
+6. Syntax is validated while typing.
+7. Invalid syntax is marked with a wavy underline and validation message.
+8. Click `Proceed` to execute.
+9. Results are rendered directly under the query panel.
+10. Click `Save` to store or update a query for the current connection.
 
 ## Saved Queries In Tree
 
@@ -86,6 +89,7 @@ https://buycoffee.to/driftingpixel
 5. Queries with `GROUP BY` or `DISTINCT`.
 6. To support transactional updates for query results, extension injects an internal `ctid` field into editable query execution.
 7. If a system shortcut blocks `Ctrl+Space` or `Cmd+Space`, autocomplete still works while typing, but manual trigger may require changing OS/editor shortcut settings.
+8. Syntax check uses parser validation via `EXPLAIN` and currently supports `SELECT`, `INSERT`, `UPDATE`, `DELETE`, `WITH`, and `VALUES` statements.
 
 ## Popup Cell Editor
 

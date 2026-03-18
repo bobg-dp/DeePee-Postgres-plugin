@@ -94,6 +94,11 @@ interface AutocompleteRequestPayload {
   tableQualifier?: string;
 }
 
+interface SqlSyntaxValidationResult {
+  ok: boolean;
+  message: string;
+}
+
 function escapeHtml(value: string): string {
   return value
     .replace(/&/g, "&amp;")
@@ -840,8 +845,29 @@ function getQueryPanelHtml(
       font-size: 13px;
       line-height: 1.45;
     }
+    textarea.syntax-invalid {
+      text-decoration-line: underline;
+      text-decoration-style: wavy;
+      text-decoration-color: var(--vscode-testing-iconFailed);
+      text-decoration-thickness: 1.3px;
+      text-underline-offset: 3px;
+    }
     textarea:focus {
       border-color: var(--vscode-focusBorder);
+    }
+    .syntax-status {
+      min-height: 16px;
+      font-size: 11px;
+      opacity: 0.9;
+    }
+    .syntax-status.ok {
+      color: var(--vscode-testing-iconPassed);
+    }
+    .syntax-status.error {
+      color: var(--vscode-testing-iconFailed);
+    }
+    .syntax-status.info {
+      color: var(--vscode-descriptionForeground);
     }
     .autocomplete {
       border: 1px solid var(--vscode-editorWidget-border);
@@ -1062,6 +1088,7 @@ function getQueryPanelHtml(
 
   <div class="editor-wrap">
     <textarea id="sqlInput" placeholder="Write SQL query here..."></textarea>
+    <div id="syntaxStatus" class="syntax-status info">SQL syntax: waiting for input...</div>
     <div id="autocomplete" class="autocomplete hidden">
       <div class="autocomplete-header">Suggestions (Ctrl+Space)</div>
       <div id="autocompleteList" class="autocomplete-list"></div>
@@ -1103,6 +1130,7 @@ function getQueryPanelHtml(
     const status = document.getElementById("status");
     const queryInfo = document.getElementById("queryInfo");
     const sqlInput = document.getElementById("sqlInput");
+    const syntaxStatus = document.getElementById("syntaxStatus");
     const autocomplete = document.getElementById("autocomplete");
     const autocompleteList = document.getElementById("autocompleteList");
     const proceedButton = document.getElementById("proceedButton");
@@ -1122,6 +1150,9 @@ function getQueryPanelHtml(
 
     let activeSuggestions = [];
     let activeSuggestionIndex = -1;
+    let syntaxValidationTimer = null;
+    let latestSyntaxRequestId = 0;
+    let appliedSyntaxRequestId = 0;
     let latestResultPayload = null;
     let resultSearchQuery = "";
     let resultChangesByRow = new Map();
@@ -1140,6 +1171,41 @@ function getQueryPanelHtml(
     function setStatus(message, ok) {
       status.textContent = message;
       status.className = ok ? "status ok" : "status error";
+    }
+
+    function setSyntaxStatus(message, kind) {
+      syntaxStatus.textContent = message;
+      syntaxStatus.className = "syntax-status " + kind;
+
+      if (kind === "error") {
+        sqlInput.classList.add("syntax-invalid");
+      } else {
+        sqlInput.classList.remove("syntax-invalid");
+      }
+    }
+
+    function requestSyntaxValidation() {
+      if (syntaxValidationTimer) {
+        clearTimeout(syntaxValidationTimer);
+      }
+
+      const sql = String(sqlInput.value || "");
+      if (!sql.trim()) {
+        setSyntaxStatus("SQL syntax: waiting for input...", "info");
+        return;
+      }
+
+      setSyntaxStatus("SQL syntax: checking...", "info");
+      syntaxValidationTimer = setTimeout(() => {
+        latestSyntaxRequestId += 1;
+        vscode.postMessage({
+          type: "validateSqlSyntax",
+          payload: {
+            sql,
+            requestId: latestSyntaxRequestId,
+          },
+        });
+      }, 550);
     }
 
     function hideAutocomplete() {
@@ -1580,6 +1646,7 @@ function getQueryPanelHtml(
 
     sqlInput.addEventListener("input", () => {
       requestAutocomplete(false);
+      requestSyntaxValidation();
     });
 
     sqlInput.addEventListener("keydown", (event) => {
@@ -1678,9 +1745,26 @@ function getQueryPanelHtml(
         activeSuggestions = Array.isArray(msg.payload) ? msg.payload : [];
         activeSuggestionIndex = activeSuggestions.length > 0 ? 0 : -1;
         renderAutocomplete();
+        return;
+      }
+
+      if (msg.type === "sqlSyntaxValidation") {
+        const payload = msg.payload || {};
+        const requestId = Number(payload.requestId || 0);
+        if (requestId <= appliedSyntaxRequestId) {
+          return;
+        }
+
+        appliedSyntaxRequestId = requestId;
+        if (payload.ok) {
+          setSyntaxStatus(String(payload.message || "SQL syntax: valid."), "ok");
+        } else {
+          setSyntaxStatus(String(payload.message || "SQL syntax: invalid."), "error");
+        }
       }
     });
 
+    requestSyntaxValidation();
     renderResults(undefined);
   </script>
 </body>
@@ -1775,6 +1859,7 @@ async function openQueryPanel(
               schema?: unknown;
               table?: unknown;
               changes?: unknown;
+              requestId?: unknown;
             };
           })
         : undefined;
@@ -1907,6 +1992,74 @@ async function openQueryPanel(
         });
       }
 
+      return;
+    }
+
+    if (payload.type === "validateSqlSyntax") {
+      const requestId =
+        typeof payload.payload?.requestId === "number"
+          ? payload.payload.requestId
+          : 0;
+      const sql =
+        payload.payload && typeof payload.payload.sql === "string"
+          ? payload.payload.sql.trim()
+          : "";
+
+      if (!sql) {
+        await panel.webview.postMessage({
+          type: "sqlSyntaxValidation",
+          payload: {
+            requestId,
+            ok: true,
+            message: "SQL syntax: waiting for input...",
+          },
+        });
+        return;
+      }
+
+      const statementHead = sql.split(/\s+/)[0]?.toUpperCase() ?? "";
+      const explainSupported = new Set([
+        "SELECT",
+        "INSERT",
+        "UPDATE",
+        "DELETE",
+        "WITH",
+        "VALUES",
+      ]);
+
+      if (!explainSupported.has(statementHead)) {
+        await panel.webview.postMessage({
+          type: "sqlSyntaxValidation",
+          payload: {
+            requestId,
+            ok: true,
+            message:
+              "SQL syntax check is available for SELECT/INSERT/UPDATE/DELETE/WITH/VALUES.",
+          },
+        });
+        return;
+      }
+
+      const validation: SqlSyntaxValidationResult = {
+        ok: true,
+        message: "SQL syntax: valid.",
+      };
+
+      try {
+        await service.execute(`EXPLAIN ${sql}`);
+      } catch (error) {
+        validation.ok = false;
+        validation.message = `SQL syntax error: ${getErrorMessage(error)}`;
+      }
+
+      await panel.webview.postMessage({
+        type: "sqlSyntaxValidation",
+        payload: {
+          requestId,
+          ok: validation.ok,
+          message: validation.message,
+        },
+      });
       return;
     }
 
